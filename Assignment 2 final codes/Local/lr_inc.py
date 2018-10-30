@@ -26,7 +26,7 @@ print (y_train.shape)
 # Parameters
 starter_learning_rate = 0.001
 training_epochs = 150
-batch_size = 4000
+batch_size = 4096
 display_step = 1
 
 global_step = tf.Variable(0, trainable=False)

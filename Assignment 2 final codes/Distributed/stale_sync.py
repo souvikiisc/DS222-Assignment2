@@ -23,7 +23,7 @@ FLAGS = tf.app.flags.FLAGS
 server = tf.train.Server(cluster, job_name=FLAGS.job_name, task_index=FLAGS.task_index)
 
 batch_size = 4096
-learning_rate = 0.002
+learning_rate = 0.001
 training_epochs = 100
 logs_path = "/home/souvikk/project/assignments/assignment2/stale_10"
 

@@ -23,9 +23,9 @@ print (y_train.shape)
 
 
 # Parameters
-learning_rate = 0.002
+learning_rate = 0.001
 training_epochs = 150
-batch_size = 4000
+batch_size = 4096
 display_step = 1
 
 # tf Graph Input

@@ -7,12 +7,11 @@ import numpy as np
 # import h5py
 import pickle
 from scipy import sparse
-parameter_servers = ["10.24.1.218:2225",
-		    "10.24.1.219:2225"]
-workers = [ "10.24.1.220:2225",
-      "10.24.1.221:2225",
-            "10.24.1.222:2225",
-            "10.24.1.223:2225"]
+parameter_servers = ["10.24.1.210:2225",
+		    "10.24.1.211:2225"]
+workers = [ "10.24.1.212:2225",
+      "10.24.1.213:2225",
+            "10.24.1.214:2225"]
 
 cluster = tf.train.ClusterSpec({"ps":parameter_servers, "worker":workers})
 
@@ -65,7 +64,9 @@ elif FLAGS.job_name == "worker":
         regularizer = tf.nn.l2_loss(W)
         cost = tf.reduce_mean(loss + 0.01 * regularizer)
         # Gradient Descent
-        optimizer = tf.train.AdamOptimizer(learning_rate).minimize(cost)
+        grad_op = tf.train.AdamOptimizer(learning_rate)
+        rep_op = tf.train.SyncReplicasOptimizer(grad_op, replicas_to_aggregate=2, total_num_replicas=2)
+        optimizer = rep_op.minimize(cost, global_step=global_step)
 
         prediction = tf.nn.softmax(tf.matmul(x, W) + b)
         # test_prediction = tf.nn.softmax(tf.matmul(test_set, W) + b)
@@ -83,14 +84,16 @@ elif FLAGS.job_name == "worker":
         init_op = tf.global_variables_initializer()
         print("Variables initialized ...")
 
-        hooks = [tf.train.StopAtStepHook(last_step=1000000)]
+        sync_replicas_hook = rep_op.make_session_run_hook(FLAGS.task_index == 0)
+        hooks = [sync_replicas_hook,tf.train.StopAtStepHook(last_step=1000000)]
 
         sess = tf.train.MonitoredTrainingSession(master=server.target, is_chief=(FLAGS.task_index == 0),
                                                  hooks=hooks)
         print('Starting training on worker %d' % FLAGS.task_index)
+
         # while not sess.should_stop():
 
-        # create log writer object (this will log on every machine)
+            # create log writer object (this will log on every machine)
         writer = tf.summary.FileWriter(logs_path, graph=tf.get_default_graph())
 
         # perform training cycles
@@ -99,7 +102,7 @@ elif FLAGS.job_name == "worker":
         for epoch in range(training_epochs):
             avg_cost = 0.0
             total_batch = int(training_set.shape[0] / batch_size)
-            # Loop over all batches
+        # Loop over all batches
             for i in range(total_batch):
                 batch_xs = training_set[i * batch_size:i * batch_size + batch_size, :].toarray()
                 batch_ys = y_train[i * batch_size:i * batch_size + batch_size, :]
@@ -130,7 +133,7 @@ elif FLAGS.job_name == "worker":
         end_time = time.time()
         print("test_accuracy=", acc / y_test.shape[0])
         print("test time: %3.2fs" % float(end_time - begin_time))
-        file_name = 'cost_epochs_' + str(FLAGS.task_index)
+        file_name = 'sy_cost_epochs_' + str(FLAGS.task_index)
         f = open(file_name, 'w')
         pickle.dump(epoch_cost, f, protocol=pickle.HIGHEST_PROTOCOL)
 
